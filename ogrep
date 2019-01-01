@@ -89,6 +89,7 @@ def process_file(filename, input_file, regex, printer, opts):
 
     # Whether at least one match found
     match_found = False
+    last_match_indent = -1
     
     # Number of last printed line, whether it is a context or a match
     last_printed_lineno = None
@@ -136,6 +137,16 @@ def process_file(filename, input_file, regex, printer, opts):
         context.append((indentation, lineno, line))
 
         matches = list(regex.finditer(line))
+
+        if last_match_indent >=0 and indentation > last_match_indent:
+            if not matches:
+                printer.print_context(lineno, line)
+        else:
+            if matches:
+                last_match_indent = indentation
+            else:
+                last_match_indent = -1
+
         if matches:
             # Print filename, if needed, when first match found
             if not match_found and opts.print_filename and filename != '-':
