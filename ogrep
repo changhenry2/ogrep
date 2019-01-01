@@ -5,6 +5,8 @@ import sys
 import re
 import argparse
 import subprocess
+import os
+import glob
 
 # ANSI sequences for decorating matches
 STYLE_BOLD='\x1b[1m'
@@ -200,6 +202,7 @@ def parse_arguments(args):
                         help="Ignore C preprocessor instructions")
     parser.add_argument('-g', '--git-grep', dest='use_git_grep', action='store_true',
                         help="Use 'git grep' to filter files, FILE is used as path specification")
+    parser.add_argument('-r', '--recursive', dest='recursive', action='store_true', help="recursive search files under the directory")
     return parser.parse_args(args)
 
 def main(args):
@@ -252,16 +255,30 @@ def main(args):
                     match_found = True
 
     else:
-        if opts.file != '-':
-            input_file = open(opts.file, 'r')
-        else:
-            input_file = sys.stdin
-
-        try:
-            match_found = process_file(opts.file, input_file, regex, printer, opts)
-        finally:
+        match_found = False
+        if opts.recursive:
             if opts.file != '-':
-                input_file.close()
+                for filename in glob.iglob(opts.file + "/**", recursive=True):
+                    if not os.path.isfile(filename):
+                        continue
+
+                    input_file = open(filename, 'r')
+                    try:
+                        match_found = process_file(filename, input_file, regex, printer, opts)
+                    finally:
+                        input_file.close()
+            
+        else:
+            if opts.file != '-':
+                input_file = open(opts.file, 'r')
+            else:
+                input_file = sys.stdin
+
+            try:
+                match_found = process_file(opts.file, input_file, regex, printer, opts)
+            finally:
+                if opts.file != '-':
+                    input_file.close()
 
     return 0 if match_found else 1
 
